@@ -9,37 +9,51 @@ const canvas = document.querySelector('#c');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x808080);
 
+
 const size = {
-    width: window.innerWidth - 100,
-    height: window.innerHeight - 100
+    width: window.innerWidth - 25,
+    height: window.innerHeight - 25
 };
 
-const camera = new THREE.PerspectiveCamera(75, size.width / size.height, 0.1, 1000);
-camera.position.z = 55;
-camera.position.y = 40;
-
-const loader = new GLTFLoader();
-
-loader.load('assets/scene.glb', function (gltf) {
-    gltf.scene.position.y = 50;
-    gltf.scene.scale.set(2, 2, 2);
-    scene.add(gltf.scene);
-    console.log(gltf);
-}
+const camera = new THREE.PerspectiveCamera(
+    45,                      // Field of view (FOV)
+    9 / 16, // Aspect ratio
+    0.1,                     // Near plane
+    1000                     // Far plane
 );
 
-// position the loader on the scene
+// Set the position of the camera (adjust as needed)
+camera.position.set(0, 10, 60);
 
-const depthCameraSize = { width: 1920, height: 1920 };
 
-const depthCamera = new THREE.PerspectiveCamera(75, depthCameraSize.width / depthCameraSize.height, 0.1, 1000);
+const loader = new GLTFLoader();
+let depthCamera;
 
-// Adjust position based on Blender values
-depthCamera.position.x = 0; // Blender X
-depthCamera.position.y = 65.6817; // Blender Y
-depthCamera.position.z = 103.1674; // Blender Z
+loader.load('assets/scene.glb', function (gltf) {
+    scene.add(gltf.scene);
+    console.log(gltf);
+    console.log(gltf.cameras);
+    // Check if cameras exist in the glTF file
+    if (gltf.cameras && gltf.cameras.length > 0) {
+        const blenderCamera = gltf.cameras[0];
 
-// Adjust rotation bas
+        // Create depthCamera only if blenderCamera is defined
+        if (blenderCamera) {
+            depthCamera = new THREE.PerspectiveCamera(blenderCamera.fov, size.width / size.height, blenderCamera.near, blenderCamera.far);
+            depthCamera.position.copy(blenderCamera.position);
+            depthCamera.rotation.copy(blenderCamera.rotation);
+            depthCamera.projectionMatrix.copy(blenderCamera.projectionMatrix);
+
+            console.log(depthCamera);
+
+        } else {
+            console.error('No camera data found in Blender camera.');
+        }
+    } else {
+        console.error('No camera data found in glTF file.');
+    }
+});
+
 
 
 
@@ -48,6 +62,7 @@ const renderer = new THREE.WebGLRenderer({
     canvas: canvas,
     antialias: true
 });
+
 renderer.setSize(size.width, size.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -76,8 +91,21 @@ scene.add(directionalLight);
 // render scene 
 
 const render = () => {
-    renderer.render(scene, depthCamera);
     requestAnimationFrame(render);
+
+    if (depthCamera) {
+        renderer.setViewport(0, 0, 0.7 * window.innerWidth, window.innerHeight);
+        renderer.setScissor(0, 0, 0.7 * window.innerWidth, window.innerHeight);
+        renderer.setScissorTest(true);
+        renderer.render(scene, depthCamera);
+    }
+
+    renderer.setViewport(0.7 * window.innerWidth, 0, 0.3 * window.innerWidth, window.innerHeight);
+    renderer.setScissor(0.7 * window.innerWidth, 0, 0.3 * window.innerWidth, window.innerHeight);
+    renderer.setScissorTest(true);
+    renderer.render(scene, camera);
+
+
 }
 
 render();
