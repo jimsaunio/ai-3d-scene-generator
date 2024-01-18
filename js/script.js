@@ -6,14 +6,17 @@ import depthVertexShader from '../shaders/vertex.glsl?raw';
 import depthFragmentShader from '../shaders/fragment.glsl?raw';
 
 const canvas = document.querySelector('#c');
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf4f4f4);
 
 
 
+
+
 const size = {
-    width: window.innerWidth - 25,
-    height: window.innerHeight - 25
+    width: window.innerWidth - 100,
+    height: window.innerHeight - 100,
 };
 
 const loader = new GLTFLoader();
@@ -22,6 +25,8 @@ const renderer = new THREE.WebGLRenderer({
     antialias: true,
 });
 
+
+
 let depthCamera;
 let depthTarget;
 let depthMaterial;
@@ -29,26 +34,22 @@ let depthMaterial;
 
 
 // Camera in mobile size to see the rendered view of the scene
-const camera = new THREE.PerspectiveCamera(
-    45,
-    9 / 16,
-    0.1,
-    1000
-);
+let camera;
+let planeWidth;
+let planeHeight;
+
 
 // Set the position of the camera (adjust as needed)
-camera.position.set(0, 10, 400);
-
-// Orbit Controls
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.05;
 
 
+
+const imageTexture = new THREE.TextureLoader().load('../assets/test_img.png');
+imageTexture.wrapT = THREE.RepeatWrapping;
+imageTexture.wrapS = THREE.RepeatWrapping;
+imageTexture.flipY = false;
 
 
 const createDepthTarget = () => {
-
     depthTarget = new THREE.WebGLRenderTarget(size.width, size.height);
     depthTarget.texture.format = THREE.RGBAFormat;
     depthTarget.texture.minFilter = THREE.NearestFilter;
@@ -62,32 +63,49 @@ const createDepthTarget = () => {
 }
 
 
+
+
 const setupDepthCamera = () => {
     loader.load('assets/scene.glb', function (gltf) {
-
-
         // Set the depthMaterial to all meshes in the scene
         gltf.scene.traverse(function (child) {
-            if (child.isMesh) {
-                child.material.side = THREE.DoubleSide;
-                child.material.metalness = 0;
+            if (child.isMesh && child.geometry) {
+                const textureMaterial = new THREE.MeshStandardMaterial({ map: imageTexture, side: THREE.DoubleSide, depthWrite: false });
+                const mesh = new THREE.Mesh(child.geometry, textureMaterial);
+                mesh.position.copy(child.position);
+                mesh.rotation.copy(child.rotation);
+                mesh.scale.copy(child.scale);
+                mesh.wrapT = THREE.RepeatWrapping;
+                mesh.wrapS = THREE.RepeatWrapping;
+                mesh.flipY = false;
+                mesh.uvsNeedUpdate = true;
+                scene.add(mesh);
+
+
+                // child.material = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
 
             }
         });
         scene.add(gltf.scene);
 
 
-        console.log(gltf);
+        console.log(gltf)
         // Check if cameras exist in the glTF file
         if (gltf.cameras && gltf.cameras.length > 0) {
             const blenderCamera = gltf.cameras[0];
-            // Create depthCamera only if blenderCamera is defined
             if (blenderCamera) {
                 depthCamera = new THREE.PerspectiveCamera(blenderCamera.fov, size.width / size.height, 0.001, 1);
                 depthCamera.position.copy(blenderCamera.position);
                 depthCamera.rotation.copy(blenderCamera.rotation);
                 depthCamera.projectionMatrix.copy(blenderCamera.projectionMatrix);
-                depthCamera.updateMatrixWorld();
+                depthCamera.updateMatrixWorld(true);
+
+                camera = new THREE.PerspectiveCamera(blenderCamera.fov, size.width / size.height, 0.001, 10000);
+
+                camera.rotation.copy(blenderCamera.rotation);
+                camera.projectionMatrix.copy(blenderCamera.projectionMatrix);
+                camera.updateMatrixWorld(true);
+
 
                 depthMaterial = new THREE.ShaderMaterial({
                     extensions: {
@@ -105,16 +123,18 @@ const setupDepthCamera = () => {
                 });
 
 
-                // Create a plane to render the depthTarget texture
-
-                const geometry = new THREE.PlaneGeometry(150, 100, 200, 100);
+                const geometry = new THREE.PlaneGeometry(1012, 704, 100, 100);
                 const mesh = new THREE.Mesh(geometry, depthMaterial);
-
-                mesh.position.set(0, 15, 100);
-
-                
-
+                mesh.rotation.copy(depthCamera.rotation);
+                mesh.position.set(350, 350, 0);
+                mesh.rotation.x = Math.PI / 2 * 3;
+                mesh.scale.set(0.105, 0.105, 0.105);
                 scene.add(mesh);
+        
+                camera.position.set(350, 495, 0);
+                camera.lookAt(mesh.position);
+
+
 
 
             } else {
@@ -131,8 +151,6 @@ const setupDepthCamera = () => {
 const setupScene = () => {
     renderer.setSize(size.width, size.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.physicallyCorrectLights = true;
-    renderer.setClearColor(0xf4f4f4, 1);
 
     // // Floor to the world
     // const planeGeometry = new THREE.PlaneGeometry(window.innerWidth, window.innerHeight);
@@ -162,7 +180,15 @@ const init = () => {
     setupScene();
     setupDepthCamera();
     createDepthTarget();
+
+    const newButton = document.createElement('button');
+    newButton.innerText = 'Save Image';
+    newButton.addEventListener('click', onClickSaveImage);
+    document.body.appendChild(newButton);
+
+
     window.addEventListener('resize', onWindowResize);
+
 }
 
 
@@ -171,47 +197,63 @@ const init = () => {
 const render = () => {
     requestAnimationFrame(render);
 
-    const depthViewWidth = 0.7 * window.innerWidth;
-    const depthViewGap = 10; // Adjust the gap as needed
+    const depthViewWidth = window.innerWidth;
+    const depthHeight = window.innerHeight;
+
 
     if (depthCamera) {
 
         // Depth Camera View
-        renderer.setViewport(0, 0, depthViewWidth - depthViewGap, window.innerHeight);
-        renderer.setScissor(0, 0, depthViewWidth - depthViewGap, window.innerHeight);
-        renderer.setScissorTest(true);
+        renderer.setViewport(0, 0, depthViewWidth, depthHeight);
         renderer.setRenderTarget(depthTarget);
         renderer.render(scene, depthCamera);
-
         // Update the depthMaterial with the depthTarget texture
-        depthMaterial.uniforms.tDepth.value = depthTarget.depthTexture; // Set the depthTexture to the depthMaterial
+        depthMaterial.uniforms.tDepth.value = depthTarget.depthTexture;
 
-    
 
         // Render the depthTarget texture
         renderer.setRenderTarget(null);
+
         renderer.render(scene, depthCamera);
+
 
     }
 
-    
 
-    // Regular Camera View
-    renderer.setViewport(0.7 * window.innerWidth + depthViewGap, 0, 0.3 * window.innerWidth, window.innerHeight);
-    renderer.setScissor(0.7 * window.innerWidth + depthViewGap, 0, 0.3 * window.innerWidth, window.innerHeight);
-    renderer.setScissorTest(true);
-    renderer.render(scene, camera);
+
+
+
+
 };
 
 const onWindowResize = () => {
-    size.width = window.innerWidth;
-    size.height = window.innerHeight;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
 
-    camera.aspect = size.width / size.height;
+    camera.aspect = width / height;
     camera.updateProjectionMatrix();
 
-    renderer.setSize(size.width, size.height);
+    depthCamera.aspect = width / height;
+    depthCamera.updateProjectionMatrix();
+
+    renderer.setSize(width, height);
 }
+
+
+
+const onClickSaveImage = () => {
+
+    // Render the scene with the camera onto the offscreen renderer
+    renderer.render(scene, camera);
+    const imgData = renderer.domElement.toDataURL();
+    const img = new Image();
+    img.src = imgData;
+    img.width = 2024 / 2;
+    img.height = 1408 / 2;
+
+    document.body.appendChild(img);
+
+};
 
 render();
 init();
