@@ -17,7 +17,7 @@ scene.background = new THREE.Color(0xf4f4f4);
 
 const size = {
     width: window.innerWidth - 100,
-    height: window.innerHeight,
+    height: window.innerHeight - 100,
 };
 
 const loader = new GLTFLoader();
@@ -28,7 +28,7 @@ const renderer = new THREE.WebGLRenderer({
 
 const renderer2 = new THREE.WebGLRenderer({
     canvas: canvas2,
-    antialias: true,
+
 });
 
 
@@ -41,10 +41,14 @@ let depthMaterial;
 // Camera in mobile size to see the rendered view of the scene
 let camera;
 
-const mobileViewCamera = new THREE.PerspectiveCamera(28.119373240232346, 16 / 9, 0.1, 1000);
+const mobileViewCamera = new THREE.PerspectiveCamera(28.119373240232346, 1, 1, 1000);
 mobileViewCamera.position.set(0, 12.167400360107422, 76.681701660156255);
 mobileViewCamera.rotation.set(-0.2617993877991494, 0, 0);
-mobileViewCamera.updateMatrixWorld(true);
+const mobileWidth = 600;
+const mobileHeight = 600;
+
+
+renderer2.setViewport(0, 0, mobileWidth, mobileHeight);
 
 
 
@@ -64,7 +68,7 @@ myHeaders.append("Content-Type", "application/json");
 // Set the position of the camera (adjust as needed)
 
 let imageTexture;
-let textureImage = '../assets/test.png';
+let textureImage = '../assets/test_img.png';
 
 
 const createDepthTarget = () => {
@@ -84,13 +88,13 @@ const createDepthTarget = () => {
 
 
 const setupDepthCamera = () => {
-    loader.load('assets/scene.glb', function (gltf) {
+    loader.load('assets/scene_export.glb', function (gltf) {
         // Set the depthMaterial to all meshes in the scene
         gltf.scene.traverse(function (child) {
             if (child.isMesh && child.geometry) {
 
 
-                const textureMaterial = new THREE.MeshStandardMaterial({ map: imageTexture, side: THREE.DoubleSide, depthTest: false });
+                const textureMaterial = new THREE.MeshStandardMaterial({ map: imageTexture, side: THREE.DoubleSide, depthTest: false, depthWrite: false, });
                 const mesh = new THREE.Mesh(child.geometry, textureMaterial);
                 mesh.position.copy(child.position);
                 mesh.rotation.copy(child.rotation);
@@ -108,7 +112,7 @@ const setupDepthCamera = () => {
         if (gltf.cameras && gltf.cameras.length > 0) {
             const blenderCamera = gltf.cameras[0];
             if (blenderCamera) {
-                depthCamera = new THREE.OrthographicCamera(blenderCamera.fov, size.width / size.height, 0.001, 1);
+                depthCamera = new THREE.PerspectiveCamera(blenderCamera.fov, size.width / size.height, 0.001, 1.5);
                 depthCamera.position.copy(blenderCamera.position);
                 console.log(blenderCamera.position);
                 depthCamera.scale.copy(blenderCamera.scale)
@@ -116,13 +120,12 @@ const setupDepthCamera = () => {
                 depthCamera.projectionMatrix.copy(blenderCamera.projectionMatrix);
                 depthCamera.updateMatrixWorld(true);
 
-                camera = new THREE.PerspectiveCamera(blenderCamera.fov, size.width / size.height, 0.001, 1);
+                camera = new THREE.PerspectiveCamera(blenderCamera.fov, size.width / size.height, 0.001, 1.5);
                 camera.rotation.copy(blenderCamera.rotation);
                 camera.scale.copy(blenderCamera.scale)
                 camera.projectionMatrix.copy(blenderCamera.projectionMatrix);
                 camera.updateMatrixWorld(true);
 
-                console.log(depthCamera.fov);
                 depthMaterial = new THREE.ShaderMaterial({
                     extensions: {
                         derivatives: '#extension GL_OES_standard_derivatives : enable',
@@ -196,11 +199,14 @@ const setupScene = () => {
 
 const addTextureToScene = () => {
     imageTexture = new THREE.TextureLoader().load(textureImage, function (texture) {
-        // Callback function to handle texture loading completion
         texture.flipY = false;
         texture.wrapT = THREE.RepeatWrapping;
         texture.wrapS = THREE.RepeatWrapping;
-        texture.DoubleSide = false;
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.anisotropy = 16;
+        texture.depthTest = false;
+        texture.depthWrite = false;
         texture.repeat.set(1, 1);
         imageTexture = texture;
         setupDepthCamera();
@@ -248,19 +254,32 @@ const render = () => {
         // Mobile Camera View
     }
 
-    const mobileWidth = size.width * 0.3;
-    const mobileHeight = size.height * 0.5;
-    mobileViewCamera.lookAt(0, 0, -1500);
     mobileViewCamera.updateProjectionMatrix();
-    renderer2.setViewport(0, 0, mobileWidth, mobileHeight);
-    renderer2.render(scene, mobileViewCamera);
-    canvas2.style.width = `${mobileWidth}px`;
+    mobileViewCamera.lookAt(0, 0, -1600);
+    mobileViewCamera.updateMatrixWorld(true);
+    mobileViewCamera.scale.set(1, 1.3, 1.3);
+    mobileViewCamera.updateMatrixWorld(true);
+
+    canvas2.style.width = `${mobileWidth * 0.7}px`;
     canvas2.style.height = `${mobileHeight}px`;
+
+    renderer2.setSize(mobileWidth * 0.6, mobileHeight);
+    renderer2.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer2.render(scene, mobileViewCamera);
 
     controls.update();
 
-
 };
+
+const animate = () => {
+    requestAnimationFrame(animate);
+
+    mobileViewCamera.position.z = Math.sin(Date.now() * 0.001) * 10 + 50;
+    mobileViewCamera.motionBlur = true;
+
+}
+
+animate();
 
 const onWindowResize = () => {
     size.width = window.innerWidth - 100;
@@ -281,14 +300,15 @@ const onClickSaveImage = (e) => {
     img.src = imgData;
     img.width = 2760;
     img.height = 1920;
+    img.colorDepth = 16;
 
 
     // download the image 
 
-    // const a = document.createElement('a');
-    // a.href = imgData;
-    // a.download = 'image.png';
-    // a.click();
+    const a = document.createElement('a');
+    a.href = imgData;
+    a.download = 'image.png';
+    a.click();
 
     // base64 png image
     const base64String = imgData.replace('data:image/png;base64,', '');
@@ -305,41 +325,42 @@ const sendRequest = async (image) => {
 
     const raw = JSON.stringify({
         "key": "RH6vKf2wxftFGh7g9wA6NNIZTvPexxxFvkeWUXzwOruQxsFmkaoX7XdyGR64",
-        "controlnet_model": "depth",
-        "controlnet_type": "depth",
         "model_id": "dream-shaper-8797",
         "guess_mode": "no",
-        "prompt": "{{Majestic Alpine mountain range, where snow-capped peaks pierce the azure sky, pristine glaciers cling to rugged cliffs, and evergreen forests blanket the lower slopes in a rich tapestry of green}}, realism, octane render, 8k, exploration, cinematic, trending on artstation, 35 mm camera, unreal engine, hyper detailed, photo - realistic maximum detail, volumetric light, moody cinematic epic concept art, realistic matte painting, hyper photorealistic, epic, trending on artstation, movie concept art, cinematic composition, ultra - detailed, realistic.",
+        "prompt": "{{ Charming European village square, cobblestone streets lined with colorful facades of centuries- old buildings, bustling with locals enjoying a sunny market day}}, ultra-realistic, realism, octane render, 8k, exploration, cinematic, trending on artstation, 35 mm camera, unreal engine, hyper detailed, photo - realistic maximum detail, volumetric light",
         "base64": "yes",
         "init_image": image,
         "mask_image": null,
-        "width": "512",
-        "height": "512",
+        "width": "1024",
+        "height": "1024",
         "use_karras_sigmas": "yes",
         "algorithm_type": null,
         "safety_checker_type": null,
         "tomesd": "yes",
         "vae": null,
         "embeddings": null,
-        "lora_strength": null,
         "upscale": null,
         "instant_response": null,
         "strength": 1,
-        "negative_prompt": "",
+        "negative_prompt": "low quality, bad quality, sketches, low resolution, low res",
         "guidance": 7.5,
         "samples": 1,
         "safety_checker": "yes",
         "auto_hint": "no",
-        "steps": 25,
-        "seed": 5,
+        "steps": 20,
+        "seed": null,
         "webhook": null,
         "track_id": null,
         "controlnet_conditioning_scale": null,
         "temp": null,
+        "clip_skip": "2",
+        "denoise": "yes",
         "ip_adapter_id": null,
         "ip_adapter_scale": null,
         "ip_adapter_image": null,
-        "scheduler": "DDPMScheduler",
+        "scheduler": "DPMSolverMultistepScheduler",
+        "controlnet_model": "depth",
+        "controlnet_type": "depth",
 
     });
 
@@ -353,12 +374,10 @@ const sendRequest = async (image) => {
     const response = await fetch("https://modelslab.com/api/v5/controlnet", requestOptions);
     let data = await response.json();
     let status = data.status;
-    let output;
-    console.log(data);
+    let output = data.output[0];
 
-    if (status === 'processing') {
-
-        setInterval(() => {
+    while (status === 'processing') {
+        await new Promise(resolve => {
             let rawStatus = JSON.stringify({
                 "key": "RH6vKf2wxftFGh7g9wA6NNIZTvPexxxFvkeWUXzwOruQxsFmkaoX7XdyGR64",
                 "request_id": data.id
@@ -371,54 +390,53 @@ const sendRequest = async (image) => {
                 redirect: 'follow'
             };
 
-            fetch("https://modelslab.com/api/v6/images/fetch", requestOptionsStatus)
-                .then(response => response.json())
-                .then(result => {
+            setTimeout(async () => {
+                try {
+                    const response = await fetch("https://modelslab.com/api/v6/images/fetch", requestOptionsStatus);
+                    const result = await response.json();
                     console.log(result);
                     status = result.status;
-                    output = result;
-                });
+                    output = result.output[0];
 
-        }, data.eta * 1000);
+                    resolve();
+                } catch (error) {
+                    console.error("Error fetching status:", error);
+                    // Handle the error or retry logic if needed
+                    resolve();
+                }
+            }, data.eta * 1000);
+        });
     }
 
-    if (data.status || status === 'success') {
+    if (status === 'success') {
         status = null;
-        const generatedImageData = data.output[0] || output.output[0];
+        const generatedImageData = data.output[0] || output;
         console.log(generatedImageData);
 
         try {
             // Fetch the image data from the URL
-            fetch(generatedImageData)
-                .then(response => response.text())
-                .then(base64String => {
-                    if (base64String) {
-                        console.log(base64String);
-                        const imgElement = new Image();
-                        imgElement.src = `data:image/png;base64,${base64String}`;
-                        imgElement.width = 2760;
-                        imgElement.height = 1920;
-                        textureImage = imgElement.src;
+            const imageResponse = await fetch(generatedImageData);
+            const base64String = await imageResponse.text();
 
-                        addTextureToScene();
-                    } else {
-                        console.error("Base64 string is empty or undefined.");
-                    }
-                })
-                .catch(error => {
-                    console.error("Error fetching image:", error);
-                });
+            if (base64String) {
+                console.log(base64String);
+                const imgElement = new Image();
+                imgElement.src = `data:image/png;base64,${base64String}`;
+                imgElement.width = 2760;
+                imgElement.height = 1920;
+                textureImage = imgElement.src;
 
+                addTextureToScene();
+            } else {
+                console.error("Base64 string is empty or undefined.");
+            }
         } catch (error) {
             console.error("Error fetching or decoding image:", error);
         }
     }
 
     return data;
-
 }
-
-
 
 
 render();
