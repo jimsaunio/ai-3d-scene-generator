@@ -14,7 +14,13 @@ float readDepth(sampler2D depthSampler, vec2 coord) {
 void main() {
 				//vec3 diffuse = texture2D( tDiffuse, vUv ).rgb;
     float depth = readDepth(tDepth, vUv);
+  // Invert the depth and adjust mapping
+    float invertedDepth = 1.0 - depth;
+    float adjustedDepth = pow(invertedDepth, 2.0); // Higher power for more contrast
 
-    gl_FragColor.rgb = 1.0 - vec3(depth);
+    // Map depth values to colors
+    vec3 color = vec3(adjustedDepth);
+
+    gl_FragColor.rgb = color;
     gl_FragColor.a = 1.0;
 }
