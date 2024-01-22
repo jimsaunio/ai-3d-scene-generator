@@ -6,23 +6,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>3D Scene Generator</title>
-    <style>
-        body {
-            margin: 1rem;
-            padding: 0;
-
-        }
-
-        #c {
-            display: block;
-            margin: 0 auto;
-        }
-    </style>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/normalize.css">
 </head>
 
 <body>
-    <canvas id="c"></canvas>
-    <canvas id="c2"></canvas>
+    <section class="app__container">
+        <div class="app">
+            <canvas id="c"></canvas>
+            <canvas id="c2"></canvas>
+            <div class="settings__toggle">
+                Toggle
+            </div>
+        </div>
+        <div class="settings">
+            <div class="settings__generation">
+                <div class="settings__prompt">
+                    <label for="prompt" class="prompt__label">Prompt</label>
+                    <textarea cols="10" rows="5" id="prompt" class="prompt__textarea"></textarea>
+                </div>
+                <button class="prompt__button">Generate</button>
+            </div>
+            <div class="settings__animation">
+                <div className="first__animation">
+                    First
+                </div>
+                <div className="second__animation">
+                    Second
+                </div>
+                <div className="third__animation">
+                    Third
+                </div>
+            </div>
+        </div>
+    </section>
     <script type="module" src="./js/script.js"></script>
 </body>
 
