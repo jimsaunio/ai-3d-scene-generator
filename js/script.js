@@ -7,6 +7,8 @@ import depthFragmentShader from '../shaders/fragment.glsl?raw';
 
 import ProjectedMaterial from 'three-projected-material'
 
+import gsap from 'gsap';
+
 
 const canvas = document.querySelector('#c');
 const canvas2 = document.querySelector('#c2');
@@ -18,7 +20,7 @@ scene.background = new THREE.Color(0xf4f4f4);
 
 
 const size = {
-    width: window.innerWidth / 1.3,
+    width: window.innerWidth / 1.5,
     height: window.innerHeight / 1.3,
 };
 
@@ -27,6 +29,8 @@ const renderer = new THREE.WebGLRenderer({
     canvas: canvas,
     antialias: true,
 });
+
+
 
 const renderer2 = new THREE.WebGLRenderer({
     canvas: canvas2,
@@ -41,7 +45,7 @@ let depthMaterial;
 
 
 // Camera in mobile size to see the rendered view of the scene
-let camera;
+let depthImageCamera;
 
 const mobileViewCamera = new THREE.PerspectiveCamera(28.119373240232346, 1, 1, 1000);
 mobileViewCamera.position.set(0, 12.167400360107422, 76.681701660156255);
@@ -53,7 +57,6 @@ const mobileHeight = size.height;
 renderer2.setViewport(0, 0, mobileWidth, mobileHeight);
 
 
-
 const controls = new OrbitControls(mobileViewCamera, canvas2);
 controls.enableDamping = true;
 controls.enableZoom = true;
@@ -62,6 +65,9 @@ controls.minDistance = 0.1;
 controls.zoomSpeed = 0.1;
 
 
+const tl1 = gsap.timeline({ paused: true, yoyo: true, repeat: 1 });
+const tl3 = gsap.timeline({ paused: true, yoyo: true, repeat: 1 });
+const tl2 = gsap.timeline({ paused: true, yoyo: true, repeat: 1 });
 
 const myHeaders = new Headers();
 myHeaders.append("Content-Type", "application/json");
@@ -107,12 +113,12 @@ const setupDepthCamera = () => {
                 depthCamera.projectionMatrix.copy(blenderCamera.projectionMatrix);
                 depthCamera.updateMatrixWorld(true);
 
-                camera = new THREE.PerspectiveCamera(blenderCamera.fov, size.width / size.height, 0.001, 1);
-                camera.rotation.copy(blenderCamera.rotation);
-                camera.scale.copy(blenderCamera.scale)
-                camera.projectionMatrix.copy(blenderCamera.projectionMatrix);
-                camera.colorDepth = 16;
-                camera.updateMatrixWorld(true);
+                depthImageCamera = new THREE.PerspectiveCamera(blenderCamera.fov, size.width / size.height, 0.001, 1);
+                depthImageCamera.rotation.copy(blenderCamera.rotation);
+                depthImageCamera.scale.copy(blenderCamera.scale)
+                depthImageCamera.projectionMatrix.copy(blenderCamera.projectionMatrix);
+                depthImageCamera.colorDepth = 16;
+                depthImageCamera.updateMatrixWorld(true);
 
                 depthMaterial = new THREE.ShaderMaterial({
                     extensions: {
@@ -130,38 +136,17 @@ const setupDepthCamera = () => {
                 });
 
                 gltf.scene.traverse(function (child) {
-                    if (child.isMesh && child.geometry) {
 
-                        // const textureMaterial = new THREE.MeshStandardMaterial({ map: imageTexture, side: THREE.DoubleSide, depthTest: false, depthWrite: false, });
-                        // const mesh = new THREE.Mesh(child.geometry, textureMaterial);
-                        // mesh.position.copy(child.position);
-                        // mesh.rotation.copy(child.rotation);
-                        // mesh.scale.copy(child.scale);
-                        // scene.add(mesh);
+                    const textureMaterial = new THREE.MeshBasicMaterial({ map: imageTexture, aoMap: imageTexture, side: THREE.DoubleSide, depthTest: false, depthWrite: false, });
+                    const mesh = new THREE.Mesh(child.geometry, textureMaterial);
+                    mesh.position.copy(child.position);
+                    mesh.rotation.copy(child.rotation);
+                    mesh.scale.copy(child.scale);
+                    scene.add(mesh);
 
-                        const textureMaterial = new ProjectedMaterial({
-                            depthCamera,
-                            map: imageTexture,
-                            side: THREE.DoubleSide,
-                            depthTest: false,
-                            depthWrite: false,
-                            textureScale: 0.8,
-                            cover: true,
-                            color: '#ffffff',
-                            roughness: 0.3,
-                            metalness: 0,
-                        });
-                        const mesh = new THREE.Mesh(child.geometry, textureMaterial);
-                        mesh.position.copy(child.position);
-                        mesh.rotation.copy(child.rotation);
-                        mesh.scale.copy(child.scale);
-
-                        scene.add(mesh);
-
-                        textureMaterial.project(mesh);
+                    scene.add(mesh);
 
 
-                    }
                 });
 
                 const geometry = new THREE.PlaneGeometry(1012, 704, 100, 100);
@@ -172,8 +157,8 @@ const setupDepthCamera = () => {
                 mesh.scale.set(0.105, 0.105, 0.105);
                 scene.add(mesh);
 
-                camera.position.set(350, 495, 0);
-                camera.lookAt(mesh.position);
+                depthImageCamera.position.set(350, 495, 0);
+                depthImageCamera.lookAt(mesh.position);
 
 
 
@@ -216,7 +201,6 @@ const addTextureToScene = () => {
         texture.magFilter = THREE.LinearFilter;
         texture.depthTest = false;
         texture.depthWrite = false;
-
         imageTexture = texture;
         setupDepthCamera();
     });
@@ -233,6 +217,7 @@ const init = () => {
     $renderButton.addEventListener('click', onClickSendData);
     window.addEventListener('resize', onWindowResize);
 
+    cameraMovement();
 }
 
 
@@ -265,7 +250,7 @@ const render = () => {
     mobileViewCamera.updateMatrixWorld(true);
     mobileViewCamera.lookAt(0, 0, -1650);
     mobileViewCamera.updateMatrixWorld(true);
-    mobileViewCamera.scale.set(0.7, 1.0, 1.3);
+    mobileViewCamera.scale.set(0.7, 0.9, 1.3);
     mobileViewCamera.zoom = 0.75;
     mobileViewCamera.updateMatrixWorld(true);
 
@@ -280,10 +265,53 @@ const render = () => {
 
 };
 
+const cameraMovement = () => {
+    // Camera movements
+    const $firstAnimation = document.querySelector('.first__animation');
+    const $secondAnimation = document.querySelector('.second__animation');
+    const $thirdAnimation = document.querySelector('.third__animation');
+
+    // Initial state
+    gsap.set(mobileViewCamera.position, { z: 76.681701660156255 });
+
+    $firstAnimation.addEventListener('click', () => {
+        // Reset other timelines and play the current one
+        tl2.pause().progress(0);
+        tl3.pause().progress(0);
+        tl1.restart();
+    });
+
+    $secondAnimation.addEventListener('click', () => {
+        // Reset other timelines and play the current one
+        tl1.pause().progress(0);
+        tl3.pause().progress(0);
+        tl2.restart();
+    });
+
+    $thirdAnimation.addEventListener('click', () => {
+        // Reset other timelines and play the current one
+        tl1.pause().progress(0);
+        tl2.pause().progress(0);
+        tl3.restart();
+    });
+
+    // Animation for the first button
+    tl1.fromTo(mobileViewCamera.position, { z: 76.681701660156255, delay: 1 }, { z: 65, duration: 7, ease: "power1.inOut" });
+
+    // Animation for the second button
+    tl2.fromTo(mobileViewCamera.position, { z: 76.681701660156255, delay: 1 }, { z: 55, duration: 7, ease: "circ.inOut" });
+
+    // Animation for the third button
+    tl3.fromTo(mobileViewCamera.position, { z: 76.681701660156255, delay: 1 }, { z: 45, duration: 7, ease: "sine.inOut" });
+
+}
+
+
 const animate = () => {
     requestAnimationFrame(animate);
 
-    mobileViewCamera.position.z = Math.sin(Date.now() * 0.001) * 5 + 65;
+
+    // mobileViewCamera.position.z = Math.sin(Date.now() * 0.001) * 5 + 65;
     // mobileViewCamera.position.x = Math.cos(Date.now() * 0.001) * 1 + 4;
 }
 
@@ -330,12 +358,13 @@ const setSettingsView = () => {
 const onClickSendData = (e) => {
     e.preventDefault();
     // Render the scene with the camera onto the offscreen renderer
-    renderer.render(scene, camera);
+    renderer.render(scene, depthImageCamera);
     const imgData = renderer.domElement.toDataURL();
     const img = new Image();
     img.colorDepth = 16;
-    img.width = 2760;
-    img.height = 1920;
+    img.width = 2024;
+    img.height = 1408;
+    img.aspectRatio = 1;
     img.src = imgData;
 
 
@@ -349,6 +378,7 @@ const onClickSendData = (e) => {
 
     // send to api
     sendRequest(base64String, prompt);
+    console.log("sent")
 
 };
 
@@ -358,14 +388,14 @@ const sendRequest = async (image, prompt) => {
 
 
     const raw = JSON.stringify({
-        "key": "RH6vKf2wxftFGh7g9wA6NNIZTvPexxxFvkeWUXzwOruQxsFmkaoX7XdyGR64",
+        "key": "",
         "model_id": "dream-shaper-8797",
         "init_image": image,
         "mask_image": null,
         "guess_mode": "no",
         "width": "512",
         "height": "512",
-        "prompt": `{{${prompt}}}, epic concept art by barlowe wayne, ruan jia, maximum detail, trending on artstation, unreal engine, hyper-realistic, light effect, volumetric light, 3d, ultra clear detailed, octane render, 8k`,
+        "prompt": `{{${prompt}}}, epic concept art by barlowe wayne, ruan jia, maximum detail, trending on artstation, unreal engine, hyper-realistic, light effect, volumetric light, 3d, ultra clear detailed, octane render, 8k, 35 mm camera, unreal engine, hyper detailed, photo - realistic maximum detail, volumetric light, moody cinematic epic concept art, realistic matte painting, hyper photorealistic, epic, trending on artstation, movie concept art, cinematic composition, ultra - detailed, realistic`,
         "use_karras_sigmas": "yes",
         "algorithm_type": null,
         "safety_checker_type": null,
@@ -412,7 +442,7 @@ const sendRequest = async (image, prompt) => {
     while (status === 'processing') {
         await new Promise(resolve => {
             let rawStatus = JSON.stringify({
-                "key": "RH6vKf2wxftFGh7g9wA6NNIZTvPexxxFvkeWUXzwOruQxsFmkaoX7XdyGR64",
+                "key": "",
                 "request_id": data.id
             });
 
@@ -457,8 +487,9 @@ const sendRequest = async (image, prompt) => {
                 console.log(base64String);
                 const imgElement = new Image();
                 imgElement.src = `data:image/png;base64,${base64String}`;
-                imgElement.width = 2760;
-                imgElement.height = 1920;
+                imgElement.width = 2024;
+                imgElement.height = 1408;
+                imgElement.aspectRatio = 1;
                 textureImage = imgElement.src;
 
                 addTextureToScene();
