@@ -1,12 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import depthVertexShader from '../shaders/vertex.glsl?raw';
 import depthFragmentShader from '../shaders/fragment.glsl?raw';
-
-import ProjectedMaterial from 'three-projected-material'
-
 import gsap from 'gsap';
 
 
@@ -56,15 +52,6 @@ const mobileHeight = size.height;
 
 renderer2.setViewport(0, 0, mobileWidth, mobileHeight);
 
-
-const controls = new OrbitControls(mobileViewCamera, canvas2);
-controls.enableDamping = true;
-controls.enableZoom = true;
-controls.enablePan = true;
-controls.minDistance = 0.1;
-controls.zoomSpeed = 0.1;
-
-
 const tl1 = gsap.timeline({ paused: true, yoyo: true, repeat: 1 });
 const tl3 = gsap.timeline({ paused: true, yoyo: true, repeat: 1 });
 const tl2 = gsap.timeline({ paused: true, yoyo: true, repeat: 1 });
@@ -76,7 +63,124 @@ myHeaders.append("Content-Type", "application/json");
 // Set the position of the camera (adjust as needed)
 
 let imageTexture;
-let textureImage = '../assets/test_img2.png';
+let textureImage;
+
+let selectedView;
+
+let originalCameraPosition;
+let originalCameraScale;
+let originalCameraRotation;
+let originalCameraProjectionMatrix;
+
+const $fileInput = document.querySelector('.upload__input');
+
+let albumMesh;
+
+let selectedAnimation;
+
+
+
+const addAlbumCoverTexture = () => {
+
+    $fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+
+        const albumGeometry = new THREE.BoxGeometry(10, 7, 0.2);
+        const albumMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: new THREE.Texture() });
+        albumMesh = new THREE.Mesh(albumGeometry, albumMaterial);
+        albumMesh.position.set(0, 15, -10);
+        albumMesh.scale.set(1.2, 1.2, 1.2);
+        scene.add(albumMesh);
+
+
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const albumTexture = new THREE.TextureLoader().load(e.target.result);
+                albumTexture.flipY = true;
+                albumTexture.wrapT = THREE.RepeatWrapping;
+                albumTexture.wrapS = THREE.RepeatWrapping;
+                albumMaterial.map = albumTexture;
+                albumMaterial.needsUpdate = true;
+                albumMaterial.metalness = 0;
+                albumMaterial.format = THREE.RGBAFormat;
+                albumMaterial.transparent = true;
+                albumMaterial.castShadow = true;
+
+                renderer2.render(scene, mobileViewCamera);
+            }
+            reader.readAsDataURL(file);
+            const $uploadInput = document.querySelector('.upload__image');
+            $uploadInput.style.display = 'none';
+        }
+    });
+
+}
+
+
+const updateSelectedView = () => {
+    const $firstView = document.querySelector('.camera__button.first');
+    const $secondView = document.querySelector('.camera__button.second');
+    const $thirdView = document.querySelector('.camera__button.third');
+
+    $firstView.addEventListener('click', () => {
+        selectedView = 1;
+        updateCameraView();
+    });
+
+    $secondView.addEventListener('click', () => {
+        selectedView = 2;
+        updateCameraView();
+
+    });
+
+    $thirdView.addEventListener('click', () => {
+        selectedView = 3;
+        updateCameraView();
+    });
+
+}
+
+const updateCameraView = () => {
+
+    depthCamera.position.copy(originalCameraPosition);
+    depthCamera.scale.copy(originalCameraScale);
+    depthCamera.rotation.copy(originalCameraRotation);
+    depthCamera.projectionMatrix.copy(originalCameraProjectionMatrix);
+
+    depthImageCamera.position.copy(originalCameraPosition);
+    depthImageCamera.scale.copy(originalCameraScale);
+    depthImageCamera.rotation.copy(originalCameraRotation);
+    depthImageCamera.projectionMatrix.copy(originalCameraProjectionMatrix);
+
+    if (selectedView === 1) {
+        // dont change anything
+        setupDepthCamera();
+
+    } else if (selectedView === 2) {
+        // second view
+        depthCamera.position.z = 40;
+        depthCamera.lookAt(3, 15, 5);
+
+        depthImageCamera.position.z = 50;
+        depthImageCamera.lookAt(3, 15, 5);
+
+        setupDepthCamera();
+
+    } else if (selectedView === 3) {
+
+        // third view
+        depthCamera.position.x = 11;
+        depthCamera.lookAt(-10, 10, -20);
+
+        depthImageCamera.position.x = 11;
+        depthImageCamera.lookAt(-10, 10, -20);
+
+        setupDepthCamera();
+    }
+}
+
+
 
 
 const createDepthTarget = () => {
@@ -101,16 +205,23 @@ const setupDepthCamera = () => {
 
         scene.add(gltf.scene);
 
-        console.log(gltf)
         // Check if cameras exist in the glTF file
         if (gltf.cameras && gltf.cameras.length > 0) {
             const blenderCamera = gltf.cameras[0];
+
+            originalCameraPosition = blenderCamera.position;
+            originalCameraScale = blenderCamera.scale;
+            originalCameraRotation = blenderCamera.rotation;
+            originalCameraProjectionMatrix = blenderCamera.projectionMatrix;
+
             if (blenderCamera) {
                 depthCamera = new THREE.PerspectiveCamera(blenderCamera.fov, size.width / size.height, 0.001, 1);
                 depthCamera.position.copy(blenderCamera.position);
                 depthCamera.scale.copy(blenderCamera.scale)
                 depthCamera.rotation.copy(blenderCamera.rotation);
                 depthCamera.projectionMatrix.copy(blenderCamera.projectionMatrix);
+                depthCamera.colorDepth = 16;
+
                 depthCamera.updateMatrixWorld(true);
 
                 depthImageCamera = new THREE.PerspectiveCamera(blenderCamera.fov, size.width / size.height, 0.001, 1);
@@ -118,8 +229,33 @@ const setupDepthCamera = () => {
                 depthImageCamera.scale.copy(blenderCamera.scale)
                 depthImageCamera.projectionMatrix.copy(blenderCamera.projectionMatrix);
                 depthImageCamera.colorDepth = 16;
+
                 depthImageCamera.updateMatrixWorld(true);
 
+                if (selectedView === 2) {
+                    // second view
+                    depthCamera.position.z = 40;
+                    depthCamera.lookAt(3, 15, 5);
+
+                    depthImageCamera.position.z = 50;
+                    depthImageCamera.lookAt(3, 15, 5);
+
+                    depthCamera.updateMatrixWorld(true);
+                    depthImageCamera.updateMatrixWorld(true);
+                } else if (selectedView === 3) {
+
+                    // third view
+                    depthCamera.position.x = 11;
+                    depthCamera.lookAt(-10, 10, -20);
+
+                    depthImageCamera.position.x = 11;
+                    depthImageCamera.lookAt(-10, 10, -20);
+                    depthCamera.updateMatrixWorld(true);
+                    depthImageCamera.updateMatrixWorld(true);
+                }
+
+
+                // Create the depth material
                 depthMaterial = new THREE.ShaderMaterial({
                     extensions: {
                         derivatives: '#extension GL_OES_standard_derivatives : enable',
@@ -137,15 +273,14 @@ const setupDepthCamera = () => {
 
                 gltf.scene.traverse(function (child) {
 
-                    const textureMaterial = new THREE.MeshBasicMaterial({ map: imageTexture, aoMap: imageTexture, side: THREE.DoubleSide, depthTest: false, depthWrite: false, });
-                    const mesh = new THREE.Mesh(child.geometry, textureMaterial);
-                    mesh.position.copy(child.position);
-                    mesh.rotation.copy(child.rotation);
-                    mesh.scale.copy(child.scale);
-                    scene.add(mesh);
-
-                    scene.add(mesh);
-
+                    if (textureImage !== undefined) {
+                        const textureMaterial = new THREE.MeshBasicMaterial({ map: imageTexture, aoMap: imageTexture, side: THREE.DoubleSide, depthTest: false, depthWrite: false });
+                        const mesh = new THREE.Mesh(child.geometry, textureMaterial);
+                        mesh.position.copy(child.position);
+                        mesh.rotation.copy(child.rotation);
+                        mesh.scale.copy(child.scale);
+                        scene.add(mesh);
+                    }
 
                 });
 
@@ -181,10 +316,11 @@ const setupScene = () => {
     renderer2.setSize(size.width, size.height);
     renderer2.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
+    setupDepthCamera();
 
 
 
-    const light = new THREE.AmbientLight(0xffffff, 1.5);
+    const light = new THREE.AmbientLight(0xffffff, 0.5);
     light.position.set(0, 10, 50);
 
     scene.add(light);
@@ -209,15 +345,22 @@ const addTextureToScene = () => {
 
 const init = () => {
     setupScene();
-    setupDepthCamera();
     createDepthTarget();
-    addTextureToScene();
-    setSettingsView();
+    updateSelectedView();
     const $renderButton = document.querySelector('.prompt__button');
     $renderButton.addEventListener('click', onClickSendData);
-    window.addEventListener('resize', onWindowResize);
+
+
+    const $addingCoverPlane = document.querySelector('.upload__image');
+    $addingCoverPlane.addEventListener('click', addAlbumCoverTexture);
+
 
     cameraMovement();
+
+    const $videoRenderButton = document.querySelector('.render__button');
+    $videoRenderButton.addEventListener('click', () => {
+        onClickRenderVideo('video');
+    });
 }
 
 
@@ -231,7 +374,7 @@ const render = () => {
         const depthWidth = size.width;
         const depthHeight = size.height;
         renderer.setViewport(0, 0, depthWidth, depthHeight);
-
+        depthCamera.updateMatrixWorld(true);
         renderer.setRenderTarget(depthTarget);
         renderer.render(scene, depthCamera);
         // Update the depthMaterial with the depthTarget texture
@@ -241,10 +384,12 @@ const render = () => {
         // Render the depthTarget texture
         renderer.setRenderTarget(null);
 
-        renderer.render(scene, depthCamera);
+        depthCamera.updateMatrixWorld(true);
 
+        renderer.render(scene, depthCamera);
         // Mobile Camera View
     }
+
 
     mobileViewCamera.updateProjectionMatrix();
     mobileViewCamera.updateMatrixWorld(true);
@@ -261,9 +406,14 @@ const render = () => {
     renderer2.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer2.render(scene, mobileViewCamera);
 
-    controls.update();
+    // window resize
+    window.addEventListener('resize', onWindowResize);
+
+
 
 };
+
+
 
 const cameraMovement = () => {
     // Camera movements
@@ -274,84 +424,128 @@ const cameraMovement = () => {
     // Initial state
     gsap.set(mobileViewCamera.position, { z: 76.681701660156255 });
 
+
     $firstAnimation.addEventListener('click', () => {
-        // Reset other timelines and play the current one
-        tl2.pause().progress(0);
-        tl3.pause().progress(0);
-        tl1.restart();
+        selectedAnimation = 1;
+        firstAnimation();
     });
 
     $secondAnimation.addEventListener('click', () => {
-        // Reset other timelines and play the current one
-        tl1.pause().progress(0);
-        tl3.pause().progress(0);
-        tl2.restart();
+        selectedAnimation = 2;
+        secondAnimation();
+
     });
 
     $thirdAnimation.addEventListener('click', () => {
-        // Reset other timelines and play the current one
-        tl1.pause().progress(0);
-        tl2.pause().progress(0);
-        tl3.restart();
+        selectedAnimation = 3;
+        thirdAnimation();
     });
 
-    // Animation for the first button
-    tl1.fromTo(mobileViewCamera.position, { z: 76.681701660156255, delay: 1 }, { z: 65, duration: 7, ease: "power1.inOut" });
-
-    // Animation for the second button
+    tl1.fromTo(mobileViewCamera.position, { z: 76.681701660156255, delay: 1 }, { z: 65, duration: 7, ease: "power1.inOut", });
     tl2.fromTo(mobileViewCamera.position, { z: 76.681701660156255, delay: 1 }, { z: 55, duration: 7, ease: "circ.inOut" });
-
-    // Animation for the third button
     tl3.fromTo(mobileViewCamera.position, { z: 76.681701660156255, delay: 1 }, { z: 45, duration: 7, ease: "sine.inOut" });
 
+
+
+
 }
 
 
-const animate = () => {
-    requestAnimationFrame(animate);
+const firstAnimation = () => {
+    tl2.pause().progress(0);
+    tl3.pause().progress(0);
+    albumMesh?.position.set(0, 15, -10);
+    albumMesh?.rotation.set(0, 0, 0);
+    tl1.restart();
+    gsap.to(albumMesh?.rotation, { delay: 2, y: 3.5, duration: 6, ease: "power1.inOut", repeat: 1, yoyo: true });
+    gsap.to(albumMesh?.position, { delay: 1, y: 16, duration: 3, ease: "power1.inOut", repeat: 2, yoyo: true });
 
-
-    // mobileViewCamera.position.z = Math.sin(Date.now() * 0.001) * 5 + 65;
-    // mobileViewCamera.position.x = Math.cos(Date.now() * 0.001) * 1 + 4;
 }
 
-animate();
-
-const onWindowResize = () => {
-    size.width = window.innerWidth - 100;
-    size.height = window.innerHeight;
-    mobileViewCamera.aspect = size.width / size.height;
-    mobileViewCamera.updateProjectionMatrix();
-    renderer.setSize(size.width, size.height);
+const secondAnimation = () => {
+    tl1.pause().progress(0);
+    tl3.pause().progress(0);
+    albumMesh?.position.set(0, 15, -10);
+    albumMesh?.rotation.set(0, 0, 0);
+    tl2.restart();
+    gsap.to(albumMesh?.rotation, { delay: 0.55, y: 1.5, duration: 6.5, ease: "circ.inOut", repeat: 1, yoyo: true });
+    gsap.to(albumMesh?.position, { delay: 1, z: -2, duration: 3, ease: "power1.inOut", repeat: 2, yoyo: true });
 }
 
-const setSettingsView = () => {
+const thirdAnimation = () => {
+    tl1.pause().progress(0);
+    tl2.pause().progress(0);
+    albumMesh?.position.set(0, 15, -10);
+    albumMesh?.rotation.set(0, 0, 0);
+    tl3.restart();
+    gsap.to(albumMesh?.rotation, { delay: 2, y: 6, duration: 4, ease: "sine.inOut", repeat: 1, yoyo: true });
+    gsap.to(albumMesh?.position, { delay: 1, z: 10, duration: 5, ease: "power1.inOut", repeat: 1, yoyo: true });
+}
 
+const onClickRenderVideo = async (output) => {
 
-    const $settingsGeneration = document.querySelector('.settings__generation');
-    const $settingsAnimation = document.querySelector('.settings__animation');
-    const $settingsToggle = document.querySelector('.settings__toggle');
+    let chunks = [];
 
-    $settingsGeneration.style.display = 'flex';
+    let canvasStream = canvas2.captureStream(30);
 
-    $settingsToggle.addEventListener('click', (e) => {
+    const mediaRecorder = new MediaRecorder(canvasStream, { mimeType: 'video/webm; codecs=vp9' });
 
-        if ($settingsGeneration.style.display === 'flex') {
-            $settingsGeneration.style.display = 'none';
-            $settingsAnimation.style.display = 'flex';
-
-            canvas.style.display = 'none';
-            canvas2.style.display = 'block';
-        } else {
-            $settingsGeneration.style.display = 'flex';
-            $settingsAnimation.style.display = 'none';
-
-            canvas.style.display = 'block';
-            canvas2.style.display = 'none';
+    mediaRecorder.ondataavailable = function (e) {
+        if (e.data.size > 0) {
+            chunks.push(e.data);
         }
+    }
 
-    });
+    mediaRecorder.onstop = function (e) {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        chunks = [];
+        const videoURL = URL.createObjectURL(blob);
+        const downloadLink = document.createElement('a');
+        downloadLink.href = videoURL;
+        downloadLink.download = output + '.webm';
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
 
+    if (selectedAnimation === 1) {
+        firstAnimation();
+        mediaRecorder.start();
+
+        setTimeout(() => {
+            mediaRecorder.stop();
+        }, 14000);
+
+
+
+
+    }
+    if (selectedAnimation === 2) {
+        secondAnimation();
+        duration = tl2.duration();
+        setTimeout(() => {
+            mediaRecorder.start();
+        }, duration * 1000);
+
+        setTimeout(() => {
+            mediaRecorder.stop();
+        }
+            , duration * 1000 + 1000);
+    }
+    if (selectedAnimation === 3) {
+        thirdAnimation();
+        duration = tl3.duration();
+        setTimeout(() => {
+            mediaRecorder.start();
+        }, duration * 1000);
+
+        setTimeout(() => {
+            mediaRecorder.stop();
+        }, duration * 1000 + 1000);
+
+    }
+
+    clearTimeout();
 
 }
 
@@ -371,7 +565,6 @@ const onClickSendData = (e) => {
     const $prompt = document.querySelector('.prompt__textarea');
     const prompt = $prompt.value;
 
-    // download the image 
 
     // base64 png image
     const base64String = imgData.replace('data:image/png;base64,', '');
@@ -382,6 +575,26 @@ const onClickSendData = (e) => {
 
 };
 
+
+const onWindowResize = () => {
+    size.width = window.innerWidth / 1.5;
+    size.height = window.innerHeight / 1.3;
+
+    renderer.setSize(size.width, size.height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    renderer2.setSize(size.width, size.height);
+    renderer2.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    mobileViewCamera.aspect = size.width / size.height;
+    mobileViewCamera.updateProjectionMatrix();
+
+    canvas2.style.width = `${size.width * 0.4}px`;
+    canvas2.style.height = `${size.height}px`;
+
+    renderer.render(scene, depthCamera);
+    renderer2.render(scene, mobileViewCamera);
+}
 
 
 const sendRequest = async (image, prompt) => {
@@ -405,7 +618,7 @@ const sendRequest = async (image, prompt) => {
         "upscale": null,
         "instant_response": null,
         "strength": 1,
-        "negative_prompt": "",
+        "negative_prompt": "blurry, horror, distorted, low quality, pixelated, low resolution, transparent",
         "guidance": 7.5,
         "samples": 1,
         "safety_checker": "yes",
@@ -492,7 +705,17 @@ const sendRequest = async (image, prompt) => {
                 imgElement.aspectRatio = 1;
                 textureImage = imgElement.src;
 
+                const $settingsGeneration = document.querySelector('.settings__generation');
+                const $settingsAnimation = document.querySelector('.settings__animation');
+                $settingsGeneration.style.display = 'none';
+                $settingsAnimation.style.display = 'flex';
+
+                canvas.style.display = 'none';
+                canvas2.style.display = 'block';
+                selectedView = 1;
+
                 addTextureToScene();
+
             } else {
                 console.error("Base64 string is empty or undefined.");
             }

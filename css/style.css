@@ -9,71 +9,118 @@
      #c {
          margin: 0 auto;
          border: 3px solid #ccc;
+         margin-top: 5rem;
      }
 
      .app__container {
          height: 100vh;
          width: 100vw;
+         display: flex;
+         flex-direction: row-reverse;
+         gap: 1rem;
      }
 
      .app {
-         display: flex;
-         flex-direction: column;
-         justify-content: center;
-         align-items: center;
          height: 85vh;
+         flex: 1;
      }
 
      .settings {
          border-top: 2px solid #ccc;
          background-color: rgb(0, 0, 0, 0.5);
-         height: 15vh;
-         width: 100vw;
+         height: 100vh;
          overflow: hidden;
+         width: 30vw;
      }
 
      .settings__generation {
          display: flex;
-         justify-content: center;
-         align-items: center;
+         flex-direction: column;
          justify-content: space-evenly;
          height: 100%;
-         width: 100%;
      }
+
+     .settings__camera {
+         display: flex;
+         flex-direction: row;
+         justify-content: space-evenly;
+
+     }
+
+     .camera__button {
+         margin-bottom: .4rem;
+         padding: 1rem;
+         font-size: 12px;
+         border: none;
+     }
+
 
      .settings__prompt {
          display: flex;
          flex-direction: column;
+         justify-content: center;
+         align-items: center;
          gap: .5rem;
+         padding: 1rem;
          font-size: 14px;
      }
 
+     .prompt__label {
+         font-size: 16px;
+         align-self: flex-start;
+         margin-left: 1rem;
+
+     }
+
      .prompt__textarea {
-         width: 30vw;
-         height: 8vh;
+         width: 25vw;
+         height: 15vh;
          border-radius: 5px;
          border: 1px solid #ccc;
          font-size: 14px;
          resize: none;
      }
 
+     .prompt__textarea:focus {
+         outline: none;
+         border: 2px solid orange;
+     }
+
      .settings__animation {
 
          display: none;
-         flex-direction: row;
-         justify-content: center;
-         align-items: center;
+         flex-direction: column;
          justify-content: space-evenly;
          z-index: 250;
 
      }
 
 
-     button {
-         width: 10vw;
-         border-radius: 5px;
-         border: 1px solid #ccc;
 
+     button {
+         background-image: linear-gradient(to right, #a73737 0%, #7a2828 51%, #a73737 100%);
+         margin: 10px;
+         padding: 15px 45px;
+         text-align: center;
+         text-transform: uppercase;
+         transition: 0.2s;
+         background-size: 200% auto;
+         color: white;
+         border-radius: 10px;
+         display: block;
+
+     }
+
+
+     button:hover {
+         background-position: right center;
+         /* change the direction of the change here */
+         color: #fff;
+         text-decoration: none;
+     }
+
+     button:focus {
+         border: 2px solid orange;
      }
 
      .first__animation {

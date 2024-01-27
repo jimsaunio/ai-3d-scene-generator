@@ -8,6 +8,8 @@
     <title>3D Scene Generator</title>
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/normalize.css">
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin" />
+    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp" />
 </head>
 
 <body>
@@ -15,12 +17,14 @@
         <div class="app">
             <canvas id="c"></canvas>
             <canvas id="c2"></canvas>
-            <div class="settings__toggle">
-                Toggle
-            </div>
         </div>
-        <div class="settings">
+        <aside class="settings">
             <div class="settings__generation">
+                <div class="settings__camera">
+                    <button class="camera__button first">First</button>
+                    <button class="camera__button second">Second</button>
+                    <button class="camera__button third">Third</button>
+                </div>
                 <div class="settings__prompt">
                     <label for="prompt" class="prompt__label">Prompt</label>
                     <textarea cols="10" rows="5" id="prompt" class="prompt__textarea"></textarea>
@@ -28,19 +32,29 @@
                 <button class="prompt__button">Generate</button>
             </div>
             <div class="settings__animation">
-                <div class="first__animation">
-                    First
+                <div class="settings__animation__options">
+                    <div class="first__animation">
+                        First
+                    </div>
+                    <div class="second__animation">
+                        Second
+                    </div>
+                    <div class="third__animation">
+                        Third
+                    </div>
                 </div>
-                <div class="second__animation">
-                    Second
+                <div class="upload__image">
+                    <label for="upload" class="upload__label">Upload Cover</label>
+                    <input type="file" id="upload" class="upload__input" accept="image/*" max="1">
                 </div>
-                <div class="third__animation">
-                    Third
+                <div class="render__video">
+                    <button class="render__button">Render</button>
                 </div>
             </div>
-        </div>
+        </aside>
     </section>
     <script type="module" src="./js/script.js"></script>
+
 </body>
 
 </html>
