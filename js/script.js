@@ -21,6 +21,7 @@ const size = {
 };
 
 const loader = new GLTFLoader();
+
 const renderer = new THREE.WebGLRenderer({
     canvas: canvas,
     antialias: true,
@@ -55,6 +56,7 @@ renderer2.setViewport(0, 0, mobileWidth, mobileHeight);
 const tl1 = gsap.timeline({ paused: true, yoyo: true, repeat: 1 });
 const tl3 = gsap.timeline({ paused: true, yoyo: true, repeat: 1 });
 const tl2 = gsap.timeline({ paused: true, yoyo: true, repeat: 1 });
+const tl4 = gsap.timeline({ paused: true, yoyo: true, repeat: 1 });
 
 const myHeaders = new Headers();
 myHeaders.append("Content-Type", "application/json");
@@ -73,24 +75,43 @@ let originalCameraRotation;
 let originalCameraProjectionMatrix;
 
 const $fileInput = document.querySelector('.upload__input');
+const $loader = document.querySelector('.loader');
+
 
 let albumMesh;
 
 let selectedAnimation;
+const $renderButton = document.querySelector('.prompt__button');
 
 
+
+const $restartButton = document.querySelector('.restart__button');
+$restartButton.addEventListener('click', () => {
+    window.location.reload();
+});
+
+const $startButton = document.querySelector('.introduction__button');
+$startButton.addEventListener('click', () => {
+    const $app = document.querySelector('.app__container');
+    $app.style.display = 'flex';
+    const $introduction = document.querySelector('.introduction');
+    $introduction.style.display = 'none';
+});
 
 const addAlbumCoverTexture = () => {
 
     $fileInput.addEventListener('change', (e) => {
+        e.preventDefault();
         const file = e.target.files[0];
 
-        const albumGeometry = new THREE.BoxGeometry(10, 7, 0.2);
+
+        const albumGeometry = new THREE.BoxGeometry(9, 7, 0.2);
         const albumMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: new THREE.Texture() });
         albumMesh = new THREE.Mesh(albumGeometry, albumMaterial);
         albumMesh.position.set(0, 15, -10);
         albumMesh.scale.set(1.2, 1.2, 1.2);
         scene.add(albumMesh);
+
 
 
         if (file) {
@@ -102,9 +123,7 @@ const addAlbumCoverTexture = () => {
                 albumTexture.wrapS = THREE.RepeatWrapping;
                 albumMaterial.map = albumTexture;
                 albumMaterial.needsUpdate = true;
-                albumMaterial.metalness = 0;
                 albumMaterial.format = THREE.RGBAFormat;
-                albumMaterial.transparent = true;
                 albumMaterial.castShadow = true;
 
                 renderer2.render(scene, mobileViewCamera);
@@ -123,19 +142,30 @@ const updateSelectedView = () => {
     const $secondView = document.querySelector('.camera__button.second');
     const $thirdView = document.querySelector('.camera__button.third');
 
+    $firstView.classList.add('active');
+
     $firstView.addEventListener('click', () => {
         selectedView = 1;
+        $firstView.classList.add('active');
+        $secondView.classList.remove('active');
+        $thirdView.classList.remove('active');
         updateCameraView();
     });
 
     $secondView.addEventListener('click', () => {
         selectedView = 2;
+        $secondView.classList.add('active');
+        $firstView.classList.remove('active');
+        $thirdView.classList.remove('active');
         updateCameraView();
 
     });
 
     $thirdView.addEventListener('click', () => {
         selectedView = 3;
+        $thirdView.classList.add('active');
+        $firstView.classList.remove('active');
+        $secondView.classList.remove('active');
         updateCameraView();
     });
 
@@ -201,11 +231,8 @@ const createDepthTarget = () => {
 
 const setupDepthCamera = () => {
     loader.load('assets/scene_export2.glb', function (gltf) {
-        // Set the depthMaterial to all meshes in the scene
-
         scene.add(gltf.scene);
 
-        // Check if cameras exist in the glTF file
         if (gltf.cameras && gltf.cameras.length > 0) {
             const blenderCamera = gltf.cameras[0];
 
@@ -256,6 +283,7 @@ const setupDepthCamera = () => {
 
 
                 // Create the depth material
+
                 depthMaterial = new THREE.ShaderMaterial({
                     extensions: {
                         derivatives: '#extension GL_OES_standard_derivatives : enable',
@@ -337,6 +365,7 @@ const addTextureToScene = () => {
         texture.magFilter = THREE.LinearFilter;
         texture.depthTest = false;
         texture.depthWrite = false;
+        texture.format = THREE.RGBAFormat;
         imageTexture = texture;
         setupDepthCamera();
     });
@@ -347,11 +376,10 @@ const init = () => {
     setupScene();
     createDepthTarget();
     updateSelectedView();
-    const $renderButton = document.querySelector('.prompt__button');
     $renderButton.addEventListener('click', onClickSendData);
 
 
-    const $addingCoverPlane = document.querySelector('.upload__image');
+    const $addingCoverPlane = document.querySelector('.upload__input');
     $addingCoverPlane.addEventListener('click', addAlbumCoverTexture);
 
 
@@ -392,9 +420,7 @@ const render = () => {
 
 
     mobileViewCamera.updateProjectionMatrix();
-    mobileViewCamera.updateMatrixWorld(true);
     mobileViewCamera.lookAt(0, 0, -1650);
-    mobileViewCamera.updateMatrixWorld(true);
     mobileViewCamera.scale.set(0.7, 0.9, 1.3);
     mobileViewCamera.zoom = 0.75;
     mobileViewCamera.updateMatrixWorld(true);
@@ -404,6 +430,7 @@ const render = () => {
 
     renderer2.setSize(mobileWidth * 0.4, mobileHeight);
     renderer2.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // make render2 very clear and sharp image 
     renderer2.render(scene, mobileViewCamera);
 
     // window resize
@@ -420,33 +447,54 @@ const cameraMovement = () => {
     const $firstAnimation = document.querySelector('.first__animation');
     const $secondAnimation = document.querySelector('.second__animation');
     const $thirdAnimation = document.querySelector('.third__animation');
-
+    const $fourthAnimation = document.querySelector('.fourth__animation');
     // Initial state
     gsap.set(mobileViewCamera.position, { z: 76.681701660156255 });
 
 
     $firstAnimation.addEventListener('click', () => {
         selectedAnimation = 1;
+        $firstAnimation.classList.add('active');
+        $secondAnimation.classList.remove('active');
+        $thirdAnimation.classList.remove('active');
+        $fourthAnimation.classList.remove('active');
         firstAnimation();
     });
 
     $secondAnimation.addEventListener('click', () => {
         selectedAnimation = 2;
+        $secondAnimation.classList.add('active');
+        $firstAnimation.classList.remove('active');
+        $thirdAnimation.classList.remove('active');
+        $fourthAnimation.classList.remove('active');
         secondAnimation();
 
     });
 
     $thirdAnimation.addEventListener('click', () => {
         selectedAnimation = 3;
+        $thirdAnimation.classList.add('active');
+        $firstAnimation.classList.remove('active');
+        $secondAnimation.classList.remove('active');
+        $fourthAnimation.classList.remove('active');
         thirdAnimation();
     });
 
+    $fourthAnimation.addEventListener('click', () => {
+        selectedAnimation = 4;
+        $fourthAnimation.classList.add('active');
+        $firstAnimation.classList.remove('active');
+        $secondAnimation.classList.remove('active');
+        $thirdAnimation.classList.remove('active');
+        fourthAnimation();
+    });
+
+
+
     tl1.fromTo(mobileViewCamera.position, { z: 76.681701660156255, delay: 1 }, { z: 65, duration: 7, ease: "power1.inOut", });
-    tl2.fromTo(mobileViewCamera.position, { z: 76.681701660156255, delay: 1 }, { z: 55, duration: 7, ease: "circ.inOut" });
-    tl3.fromTo(mobileViewCamera.position, { z: 76.681701660156255, delay: 1 }, { z: 45, duration: 7, ease: "sine.inOut" });
-
-
-
+    tl2.fromTo(mobileViewCamera.position, { z: 76.681701660156255, delay: 1 }, { z: 58, duration: 7, ease: "circ.inOut" });
+    tl3.fromTo(mobileViewCamera.position, { z: 76.681701660156255, delay: 1 }, { z: 58, duration: 4, ease: "power1.inOut" });
+    tl4.fromTo(mobileViewCamera.position, { z: 76.681701660156255, delay: 1 }, { z: 65, duration: 4, ease: "circ.inOut" });
 
 }
 
@@ -454,41 +502,53 @@ const cameraMovement = () => {
 const firstAnimation = () => {
     tl2.pause().progress(0);
     tl3.pause().progress(0);
-    albumMesh?.position.set(0, 15, -10);
-    albumMesh?.rotation.set(0, 0, 0);
+    tl4.pause().progress(0);
+
     tl1.restart();
-    gsap.to(albumMesh?.rotation, { delay: 2, y: 3.5, duration: 6, ease: "power1.inOut", repeat: 1, yoyo: true });
-    gsap.to(albumMesh?.position, { delay: 1, y: 16, duration: 3, ease: "power1.inOut", repeat: 2, yoyo: true });
+    gsap.to(albumMesh?.rotation, { delay: 2, y: 3.5, duration: 6, ease: "power1.inOut", repeat: 1, yoyo: true, onComplete: () => { albumMesh?.rotation.set(0, 0, 0); } });
+    gsap.to(albumMesh?.position, { delay: 1, y: 16, duration: 6, ease: "power1.inOut", repeat: 1, yoyo: true, onComplete: () => { albumMesh?.position.set(0, 15, -10); } });
 
 }
 
 const secondAnimation = () => {
     tl1.pause().progress(0);
     tl3.pause().progress(0);
-    albumMesh?.position.set(0, 15, -10);
-    albumMesh?.rotation.set(0, 0, 0);
+    tl4.pause().progress(0);
+
     tl2.restart();
-    gsap.to(albumMesh?.rotation, { delay: 0.55, y: 1.5, duration: 6.5, ease: "circ.inOut", repeat: 1, yoyo: true });
-    gsap.to(albumMesh?.position, { delay: 1, z: -2, duration: 3, ease: "power1.inOut", repeat: 2, yoyo: true });
+    gsap.to(albumMesh?.position, { delay: 1, z: -2, duration: 6, ease: "circ.inOut", repeat: 1, yoyo: true, onComplete: () => { albumMesh?.position.set(0, 15, -10); } });
 }
 
 const thirdAnimation = () => {
     tl1.pause().progress(0);
     tl2.pause().progress(0);
-    albumMesh?.position.set(0, 15, -10);
-    albumMesh?.rotation.set(0, 0, 0);
+    tl4.pause().progress(0);
+
     tl3.restart();
-    gsap.to(albumMesh?.rotation, { delay: 2, y: 6, duration: 4, ease: "sine.inOut", repeat: 1, yoyo: true });
-    gsap.to(albumMesh?.position, { delay: 1, z: 10, duration: 5, ease: "power1.inOut", repeat: 1, yoyo: true });
+    gsap.to(albumMesh?.rotation, { delay: 2, y: -3, duration: 3, ease: "power1.inOut", repeat: 1, yoyo: true, onComplete: () => { albumMesh?.rotation.set(0, 0, 0); } });
+    gsap.to(albumMesh?.position, { delay: 1, z: 10, duration: 4, ease: "power1.inOut", repeat: 1, yoyo: true, onComplete: () => { albumMesh?.position.set(0, 15, -10); } });
+}
+
+
+const fourthAnimation = () => {
+    tl1.pause().progress(0);
+    tl2.pause().progress(0);
+    tl3.pause().progress(0);
+  
+    tl4.restart();
+    gsap.to(albumMesh?.position, { delay: 1, z: -2, duration: 4, ease: "circ.inOut", repeat: 1, yoyo: true, onComplete: () => { albumMesh?.position.set(0, 15, -10); } });
 }
 
 const onClickRenderVideo = async (output) => {
 
     let chunks = [];
-
     let canvasStream = canvas2.captureStream(30);
+    const mediaRecorder = new MediaRecorder(canvasStream, { mimeType: 'video/webm; codecs=vp9', });
 
-    const mediaRecorder = new MediaRecorder(canvasStream, { mimeType: 'video/webm; codecs=vp9' });
+    const $renderIndicator = document.querySelector('.render__indicator');
+    $renderIndicator.style.display = 'inline-block';
+
+    $renderButton.style.cursor = 'not-allowed';
 
     mediaRecorder.ondataavailable = function (e) {
         if (e.data.size > 0) {
@@ -514,38 +574,52 @@ const onClickRenderVideo = async (output) => {
 
         setTimeout(() => {
             mediaRecorder.stop();
+            $renderIndicator.style.display = 'none';
+            $renderButton.style.cursor = 'pointer';
+
         }, 14000);
 
 
-
-
-    }
-    if (selectedAnimation === 2) {
+    } else if (selectedAnimation === 2) {
         secondAnimation();
-        duration = tl2.duration();
-        setTimeout(() => {
-            mediaRecorder.start();
-        }, duration * 1000);
+        mediaRecorder.start();
 
         setTimeout(() => {
             mediaRecorder.stop();
-        }
-            , duration * 1000 + 1000);
-    }
-    if (selectedAnimation === 3) {
+            $renderIndicator.style.display = 'none';
+            $renderButton.style.cursor = 'pointer';
+
+        }, 14000);
+
+    } else if (selectedAnimation === 3) {
+
         thirdAnimation();
-        duration = tl3.duration();
-        setTimeout(() => {
-            mediaRecorder.start();
-        }, duration * 1000);
+        mediaRecorder.start();
 
         setTimeout(() => {
             mediaRecorder.stop();
-        }, duration * 1000 + 1000);
+            $renderIndicator.style.display = 'none';
+            $renderButton.style.cursor = 'pointer';
 
+        }, 8000);
+
+
+    } else if (selectedAnimation === 4) {
+
+        fourthAnimation();
+        mediaRecorder.start();
+
+        setTimeout(() => {
+            mediaRecorder.stop();
+            $renderIndicator.style.display = 'none';
+            $renderButton.style.cursor = 'pointer';
+
+        }, 8000);
     }
 
     clearTimeout();
+
+
 
 }
 
@@ -571,6 +645,8 @@ const onClickSendData = (e) => {
 
     // send to api
     sendRequest(base64String, prompt);
+
+    $loader.style.display = 'flex';
     console.log("sent")
 
 };
@@ -608,7 +684,7 @@ const sendRequest = async (image, prompt) => {
         "guess_mode": "no",
         "width": "512",
         "height": "512",
-        "prompt": `{{${prompt}}}, epic concept art by barlowe wayne, ruan jia, maximum detail, trending on artstation, unreal engine, hyper-realistic, light effect, volumetric light, 3d, ultra clear detailed, octane render, 8k, 35 mm camera, unreal engine, hyper detailed, photo - realistic maximum detail, volumetric light, moody cinematic epic concept art, realistic matte painting, hyper photorealistic, epic, trending on artstation, movie concept art, cinematic composition, ultra - detailed, realistic`,
+        "prompt": `{{${prompt}}}, maximum detail, trending on artstation, unreal engine, hyper-realistic, light effect, volumetric light, 3d, ultra clear detailed, octane render, 8k, 35 mm camera, moody cinematic epic concept art, hyper photorealistic, epic, movie concept art, cinematic composition`,
         "use_karras_sigmas": "yes",
         "algorithm_type": null,
         "safety_checker_type": null,
@@ -619,7 +695,7 @@ const sendRequest = async (image, prompt) => {
         "instant_response": null,
         "strength": 1,
         "negative_prompt": "blurry, horror, distorted, low quality, pixelated, low resolution, transparent",
-        "guidance": 7.5,
+        "guidance": 9,
         "samples": 1,
         "safety_checker": "yes",
         "auto_hint": "no",
@@ -674,6 +750,11 @@ const sendRequest = async (image, prompt) => {
                     status = result.status;
                     output = result.output[0];
 
+                    const $loaderStatus = document.createElement('p');
+                    $loaderStatus.classList.add('loader__status');
+                    $loaderStatus.textContent = `Estimated time left: ${data.eta} seconds`;
+                    $loader.appendChild($loaderStatus);
+
                     if (status === "success") {
                         clearTimeout();
                     }
@@ -712,6 +793,7 @@ const sendRequest = async (image, prompt) => {
 
                 canvas.style.display = 'none';
                 canvas2.style.display = 'block';
+                $loader.style.display = 'none';
                 selectedView = 1;
 
                 addTextureToScene();

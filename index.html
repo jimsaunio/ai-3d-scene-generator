@@ -8,47 +8,107 @@
     <title>3D Scene Generator</title>
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/normalize.css">
-    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin" />
-    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600&display=swap" rel="stylesheet">
 </head>
 
 <body>
+    <section class="introduction">
+        <div class="intro__container">
+            <h1 class="introduction__title">Digital art scene generator for Music Industry</h1>
+            <p class="introduction__text">Experience the cutting-edge AI image generation technology, designed to
+                generate awe-inspiring 3D environments inspired
+                by digital art. Infuse your personal touch by incorporating your album cover image, and effortlessly
+                transform it into a
+                captivating short video tailor-made for social media or Spotify Canvas. Platform empowers your
+                creativity, turning your
+                vision into visual experiences that redefine the digital landscape</p>
+            <button class="introduction__button">Start</button>
+        </div>
+        <div class="video__container">
+            <video width="300" height="700" autoplay muted loop class="introduction__video">
+                <source src="./assets/video.mp4" type="video/mp4">
+            </video>
+        </div>
+    </section>
     <section class="app__container">
+        <button class="restart__button">
+            Restart
+        </button>
+        <div class="loader">
+            <div class="loader__item"></div>
+            <h2 class="loader__text">Scene is currently being generated</h2>
+        </div>
         <div class="app">
             <canvas id="c"></canvas>
             <canvas id="c2"></canvas>
         </div>
         <aside class="settings">
             <div class="settings__generation">
-                <div class="settings__camera">
-                    <button class="camera__button first">First</button>
-                    <button class="camera__button second">Second</button>
-                    <button class="camera__button third">Third</button>
+                <section>
+                    <h2 class="settings__title">Select camera Angle</h2>
+                    <div class="settings__camera">
+                        <button class="camera__button first">One</button>
+                        <button class="camera__button second">Two</button>
+                        <button class="camera__button third">Three</button>
+                    </div>
+                </section>
+                <hr>
+                <div>
+                    <h2 class="settings__title">Scene description</h2>
+                    <div class="settings__prompt">
+                        <label for="prompt" class="prompt__label">Write what kind of scene you would like to generate.
+                            Try to be specific as possible for best results.</label>
+                        <textarea cols="10" rows="5" id="prompt" class="prompt__textarea"
+                            placeholder="Mountain range on a bright sunny day with white deep snow"></textarea>
+                    </div>
                 </div>
-                <div class="settings__prompt">
-                    <label for="prompt" class="prompt__label">Prompt</label>
-                    <textarea cols="10" rows="5" id="prompt" class="prompt__textarea"></textarea>
-                </div>
+                <hr>
                 <button class="prompt__button">Generate</button>
             </div>
             <div class="settings__animation">
-                <div class="settings__animation__options">
-                    <div class="first__animation">
-                        First
-                    </div>
-                    <div class="second__animation">
-                        Second
-                    </div>
-                    <div class="third__animation">
-                        Third
-                    </div>
+                <div>
+                    <h2 class="settings__title">Choose animation and album cover</h2>
+                    <p class="settings__instructions">Select animation and upload the image to work as the album
+                        cover
+                        to the scene. After this you can render the video</p>
                 </div>
+                <hr>
                 <div class="upload__image">
-                    <label for="upload" class="upload__label">Upload Cover</label>
-                    <input type="file" id="upload" class="upload__input" accept="image/*" max="1">
+                    <h2 class="settings__title">Upload album cover image to the scene</h2>
+                    <label class="upload__label">
+                        <svg viewBox="0 0 640 512" fill="white" height="1em" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2 96.2-135.9c-.1-2.7-.2-5.4-.2-8.1c0-88.4 71.6-160 160-160c59.3 0 111 32.2 138.7 80.2C409.9 102 428.3 96 448 96c53 0 96 43 96 96c0 12.2-2.3 23.8-6.4 34.6C596 238.4 640 290.1 640 352c0 70.7-57.3 128-128 128H144zm79-217c-9.4 9.4-9.4 24.6 0 33.9s24.6 9.4 33.9 0l39-39V392c0 13.3 10.7 24 24 24s24-10.7 24-24V257.9l39 39c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-80-80c-9.4-9.4-24.6-9.4-33.9 0l-80 80z">
+                            </path>
+                        </svg>
+                        <input type="file" id="upload" class="upload__input" accept="image/*" max="1">
+                    </label>
+                    <hr>
                 </div>
+                <div class="settings__animation__options">
+                    <h2 class="settings__title">Choose animation</h2>
+                    <div class="animations">
+                        <button class="first__animation">
+                            One
+                        </button>
+                        <button class="second__animation">
+                            Two
+                        </button>
+                        <button class="third__animation">
+                            Three
+                        </button>
+                        <button class="fourth__animation">
+                            Four
+                        </button>
+                    </div>
+                </div>
+
+                <hr>
                 <div class="render__video">
                     <button class="render__button">Render</button>
+                    <p class="render__indicator">Rendering...</p>
                 </div>
             </div>
         </aside>
