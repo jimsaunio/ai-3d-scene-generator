@@ -786,12 +786,6 @@ const sendRequest = async (image, prompt) => {
                 imgElement.aspectRatio = 1;
                 textureImage = imgElement.src;
 
-                const a = document.createElement('a');
-                a.href = imgElement.src;
-                a.download = 'image.png';
-                // download the image
-                a.click();
-
                 const $settingsGeneration = document.querySelector('.settings__generation');
                 const $settingsAnimation = document.querySelector('.settings__animation');
                 $settingsGeneration.style.display = 'none';
