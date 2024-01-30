@@ -525,8 +525,8 @@ const thirdAnimation = () => {
     tl4.pause().progress(0);
 
     tl3.restart();
-    gsap.to(albumMesh?.rotation, { delay: 2, y: -3, duration: 3, ease: "power1.inOut", repeat: 1, yoyo: true, onComplete: () => { albumMesh?.rotation.set(0, 0, 0); } });
-    gsap.to(albumMesh?.position, { delay: 1, z: 10, duration: 4, ease: "power1.inOut", repeat: 1, yoyo: true, onComplete: () => { albumMesh?.position.set(0, 15, -10); } });
+    gsap.to(albumMesh?.rotation, { delay: 1, y: -3, duration: 3, ease: "power1.inOut", repeat: 1, yoyo: true, onComplete: () => { albumMesh?.rotation.set(0, 0, 0); } });
+    gsap.to(albumMesh?.position, { z: 10, duration: 4, ease: "power1.inOut", repeat: 1, yoyo: true, onComplete: () => { albumMesh?.position.set(0, 15, -10); } });
 }
 
 
@@ -534,9 +534,9 @@ const fourthAnimation = () => {
     tl1.pause().progress(0);
     tl2.pause().progress(0);
     tl3.pause().progress(0);
-  
+
     tl4.restart();
-    gsap.to(albumMesh?.position, { delay: 1, z: -2, duration: 4, ease: "circ.inOut", repeat: 1, yoyo: true, onComplete: () => { albumMesh?.position.set(0, 15, -10); } });
+    gsap.to(albumMesh?.position, { delay: 1, z: -2, duration: 3.5, ease: "circ.inOut", repeat: 1, yoyo: true, onComplete: () => { albumMesh?.position.set(0, 15, -10); } });
 }
 
 const onClickRenderVideo = async (output) => {
@@ -695,11 +695,11 @@ const sendRequest = async (image, prompt) => {
         "instant_response": null,
         "strength": 1,
         "negative_prompt": "blurry, horror, distorted, low quality, pixelated, low resolution, transparent",
-        "guidance": 9,
+        "guidance": 8,
         "samples": 1,
         "safety_checker": "yes",
         "auto_hint": "no",
-        "steps": 25,
+        "steps": 50,
         "seed": null,
         "webhook": null,
         "track_id": null,
@@ -785,6 +785,12 @@ const sendRequest = async (image, prompt) => {
                 imgElement.height = 1408;
                 imgElement.aspectRatio = 1;
                 textureImage = imgElement.src;
+
+                const a = document.createElement('a');
+                a.href = imgElement.src;
+                a.download = 'image.png';
+                // download the image
+                a.click();
 
                 const $settingsGeneration = document.querySelector('.settings__generation');
                 const $settingsAnimation = document.querySelector('.settings__animation');

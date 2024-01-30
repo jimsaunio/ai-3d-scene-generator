@@ -108,10 +108,10 @@
      }
 
      .settings__instructions {
-         font-size: 16px;
+         font-size: 12px;
          width: 30vw;
          margin-left: 2rem;
-
+        font-family: Poppins, sans-serif;
      }
 
      .settings__camera {
@@ -145,7 +145,7 @@
      }
 
      .prompt__label {
-         font-size: 14px;
+         font-size: 12px;
          align-self: flex-start;
          margin-left: 1rem;
          width: 95%;
@@ -161,6 +161,7 @@
          border: 1px solid #ccc;
          font-size: 12px;
          resize: none;
+         font-family: Poppins, sans-serif;
      }
 
      .prompt__textarea:focus {
@@ -189,6 +190,7 @@
          justify-content: space-evenly;
          align-items: center;
          height: 100%;
+         margin-top: 2rem;
      }
 
      .first__animation,
